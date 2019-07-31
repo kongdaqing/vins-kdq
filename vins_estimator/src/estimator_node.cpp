@@ -137,11 +137,31 @@ getMeasurements()
 
 void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
 {
+  //added by KDQ on 19-07-31
+    static int ok_count = 0,fail_count = 0;
+    int state_gain = 0;
+
     if (imu_msg->header.stamp.toSec() <= last_imu_t)
     {
+      fail_count++;
+      if(fail_count > 0)
+        state_gain = ok_count/fail_count;
+      if(state_gain < 10)
         ROS_WARN("imu message in disorder!");
+
         return;
     }
+    ok_count++;
+    if(ok_count > 10000 || fail_count > 10000)
+    {
+      fail_count = 0;
+      if(state_gain > 10)
+        ok_count = 11;
+      else
+        ok_count = 0;
+    }
+    //KDQ-END
+
     last_imu_t = imu_msg->header.stamp.toSec();
 
     m_buf.lock();
@@ -193,7 +213,7 @@ void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
         m_estimator.unlock();
         current_time = -1;
         last_imu_t = 0;
-    }
+    } ROS_WARN("imu message in disorder!");
     return;
 }
 

@@ -155,6 +155,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
             bool result = false;
             if( ESTIMATE_EXTRINSIC != 2 && (header.stamp.toSec() - initial_timestamp) > 0.1)
             {
+              //Go into intialization
                result = initialStructure();
                initial_timestamp = header.stamp.toSec();
             }
