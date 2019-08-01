@@ -85,7 +85,11 @@ void Estimator::processIMU(double dt, const Vector3d &linear_acceleration, const
 
     if (!pre_integrations[frame_count])
     {
+        //Added by KDQ on 190731:
+        //SlideWindow has many keyframe images, every image has a class Integration object named pre_integration[id] which id is same as image's index.
+        //This codes will stop when all of window-size object pre_integrations are created,But new object would be created when marginalize frame at sliding windows
         pre_integrations[frame_count] = new IntegrationBase{acc_0, gyr_0, Bas[frame_count], Bgs[frame_count]};
+
     }
     if (frame_count != 0)
     {
@@ -1030,7 +1034,7 @@ void Estimator::slideWindow()
 
             delete pre_integrations[WINDOW_SIZE];
             pre_integrations[WINDOW_SIZE] = new IntegrationBase{acc_0, gyr_0, Bas[WINDOW_SIZE], Bgs[WINDOW_SIZE]};
-
+            //std::cout << "***** KDQ ***** Bas : " << Bas[WINDOW_SIZE];
             dt_buf[WINDOW_SIZE].clear();
             linear_acceleration_buf[WINDOW_SIZE].clear();
             angular_velocity_buf[WINDOW_SIZE].clear();

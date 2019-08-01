@@ -199,6 +199,8 @@ VectorXd FeatureManager::getDepthVector()
     return dep_vec;
 }
 
+//Added by KDQ on 20190801:
+//triangulate every feature point and get its depth
 void FeatureManager::triangulate(Vector3d Ps[], Vector3d tic[], Matrix3d ric[])
 {
     for (auto &it_per_id : feature)

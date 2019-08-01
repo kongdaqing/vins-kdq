@@ -105,13 +105,18 @@ getMeasurements()
         if (imu_buf.empty() || feature_buf.empty())
             return measurements;
 
+        //Added by KDQ on 20190801 :
+        //return when last imu data is earilier than frist feature data ?
+        //examples: topics of imu datas are published later than images
         if (!(imu_buf.back()->header.stamp.toSec() > feature_buf.front()->header.stamp.toSec() + estimator.td))
         {
             //ROS_WARN("wait for imu, only should happen at the beginning");
             sum_of_wait++;
             return measurements;
         }
-
+        //Added by KDQ on 20190801 :
+        //throw image when frist feature is eariler than imu datas
+        //example: topics of imu datas are published later than images, we will draw oldest feature and search relative new feature.
         if (!(imu_buf.front()->header.stamp.toSec() < feature_buf.front()->header.stamp.toSec() + estimator.td))
         {
             ROS_WARN("throw img, only should happen at the beginning");
@@ -120,7 +125,8 @@ getMeasurements()
         }
         sensor_msgs::PointCloudConstPtr img_msg = feature_buf.front();
         feature_buf.pop();
-
+        //Added by KDQ on 20190801 :
+        //buffer imu data while imu data is earlier than feature
         std::vector<sensor_msgs::ImuConstPtr> IMUs;
         while (imu_buf.front()->header.stamp.toSec() < img_msg->header.stamp.toSec() + estimator.td)
         {
@@ -232,6 +238,8 @@ void process()
     {
         std::vector<std::pair<std::vector<sensor_msgs::ImuConstPtr>, sensor_msgs::PointCloudConstPtr>> measurements;
         std::unique_lock<std::mutex> lk(m_buf);
+        //Added by KDQ on 20190801:
+        //keep wait unless datas of imu and images come
         con.wait(lk, [&]
                  {
             return (measurements = getMeasurements()).size() != 0;
@@ -313,12 +321,14 @@ void process()
             ROS_DEBUG("processing vision data with stamp %f \n", img_msg->header.stamp.toSec());
 
             TicToc t_s;
+            //Added by KDQ On 2019-8-1 :
+            //decode image infos
             map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> image;
             for (unsigned int i = 0; i < img_msg->points.size(); i++)
             {
                 int v = img_msg->channels[0].values[i] + 0.5;
-                int feature_id = v / NUM_OF_CAM;
-                int camera_id = v % NUM_OF_CAM;
+                int feature_id = v / NUM_OF_CAM; //?
+                int camera_id = v % NUM_OF_CAM; //?
                 double x = img_msg->points[i].x;
                 double y = img_msg->points[i].y;
                 double z = img_msg->points[i].z;
@@ -331,6 +341,7 @@ void process()
                 xyz_uv_velocity << x, y, z, p_u, p_v, velocity_x, velocity_y;
                 image[feature_id].emplace_back(camera_id,  xyz_uv_velocity);
             }
+            // process image
             estimator.processImage(image, img_msg->header);
 
             double whole_t = t_s.toc();
