@@ -31,9 +31,14 @@ bool ProjectionFactor::Evaluate(double const *const *parameters, double *residua
     Eigen::Quaterniond qic(parameters[2][6], parameters[2][3], parameters[2][4], parameters[2][5]);
 
     double inv_dep_i = parameters[3][0];
-
+    //Added by KDQ ON 20180802:
+    //pts_camera_i - pts in camera-i-frame
+    //pts_imu_i  - pts in imu-i-frame which coordinate is transformed from camera by extra parameters
     Eigen::Vector3d pts_camera_i = pts_i / inv_dep_i;
     Eigen::Vector3d pts_imu_i = qic * pts_camera_i + tic;
+    //pts_w  - pts in world
+    //pts_imu_j - pts in imu-j-frame
+    //pts_camera_j - pts in camera-j-frame
     Eigen::Vector3d pts_w = Qi * pts_imu_i + Pi;
     Eigen::Vector3d pts_imu_j = Qj.inverse() * (pts_w - Pj);
     Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
@@ -43,9 +48,12 @@ bool ProjectionFactor::Evaluate(double const *const *parameters, double *residua
     residual =  tangent_base * (pts_camera_j.normalized() - pts_j.normalized());
 #else
     double dep_j = pts_camera_j.z();
+    //Added by KDQ ON 20180802:
+    //pts_camera_j/dep_j : get normalized image coordinate.
     residual = (pts_camera_j / dep_j).head<2>() - pts_j.head<2>();
 #endif
-
+    //Added by KDQ ON 20180802:
+    // sqrt_info as convanriance is focal_length/1.5
     residual = sqrt_info * residual;
 
     if (jacobians)

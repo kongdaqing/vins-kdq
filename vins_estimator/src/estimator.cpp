@@ -711,6 +711,8 @@ void Estimator::optimization()
         int j = i + 1;
         if (pre_integrations[j]->sum_dt > 10.0)
             continue;
+        //Added by KDQ ON 20190802:
+        //residual = delta_PVQ(frame_j - frame_i) - imu_propogate_PVQ(frame_i to frame_j)
         IMUFactor* imu_factor = new IMUFactor(pre_integrations[j]);
         problem.AddResidualBlock(imu_factor, NULL, para_Pose[i], para_SpeedBias[i], para_Pose[j], para_SpeedBias[j]);
     }
@@ -719,6 +721,8 @@ void Estimator::optimization()
     for (auto &it_per_id : f_manager.feature)
     {
         it_per_id.used_num = it_per_id.feature_per_frame.size();
+        //Added by KDQ ON 20190802
+        //Tracked times is less than 2,but this feature is created beyond 2 frames.
         if (!(it_per_id.used_num >= 2 && it_per_id.start_frame < WINDOW_SIZE - 2))
             continue;
  
@@ -1032,6 +1036,8 @@ void Estimator::slideWindow()
             Bas[WINDOW_SIZE] = Bas[WINDOW_SIZE - 1];
             Bgs[WINDOW_SIZE] = Bgs[WINDOW_SIZE - 1];
 
+            //Added by KDQ ON 20190802:
+            //Delete needless frame and create new pre_integration object which is initializated by newest bas/bgs,but set PVQ and noise matrix zeros.
             delete pre_integrations[WINDOW_SIZE];
             pre_integrations[WINDOW_SIZE] = new IntegrationBase{acc_0, gyr_0, Bas[WINDOW_SIZE], Bgs[WINDOW_SIZE]};
             //std::cout << "***** KDQ ***** Bas : " << Bas[WINDOW_SIZE];

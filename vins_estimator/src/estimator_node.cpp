@@ -258,6 +258,8 @@ void process()
                 { 
                     if (current_time < 0)
                         current_time = t;
+                    //Added by KDQ ON 20190802:
+                    //dt is delta time of two imu datas
                     double dt = t - current_time;
                     ROS_ASSERT(dt >= 0);
                     current_time = t;

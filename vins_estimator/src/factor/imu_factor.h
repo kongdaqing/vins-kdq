@@ -19,6 +19,8 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
     virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
     {
 
+        //Added by KDQ ON 20190802:
+        //Set Parameters which would be evaluated.
         Eigen::Vector3d Pi(parameters[0][0], parameters[0][1], parameters[0][2]);
         Eigen::Quaterniond Qi(parameters[0][6], parameters[0][3], parameters[0][4], parameters[0][5]);
 
