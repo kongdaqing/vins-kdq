@@ -51,26 +51,31 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vec
     last_track_num = 0;
     for (auto &id_pts : image)
     {
+        //Added by KDQ ON 20180803
+        //this pts infos include<x,y,z,u,v,vx,vy>
         FeaturePerFrame f_per_fra(id_pts.second[0].second, td);
-
+        //feature_id is id of feature point
         int feature_id = id_pts.first;
         auto it = find_if(feature.begin(), feature.end(), [feature_id](const FeaturePerId &it)
                           {
             return it.feature_id == feature_id;
                           });
 
+        //Added this new feature point in object feature if it doesn't be found in object feature.
         if (it == feature.end())
         {
             feature.push_back(FeaturePerId(feature_id, frame_count));
             feature.back().feature_per_frame.push_back(f_per_fra);
         }
+        //Added feature point's infos into child of feature because this point has been added in object feature earlier.
         else if (it->feature_id == feature_id)
         {
             it->feature_per_frame.push_back(f_per_fra);
             last_track_num++;
         }
     }
-
+    //Added by KDQ ON 20180803:
+    //last_track_num is number feature points in current frame found in older frames,if last_track_num < 20 indicates that current frame is very different with previous frames,so marginalize older frame.
     if (frame_count < 2 || last_track_num < 20)
         return true;
 
@@ -79,6 +84,9 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vec
         if (it_per_id.start_frame <= frame_count - 2 &&
             it_per_id.start_frame + int(it_per_id.feature_per_frame.size()) - 1 >= frame_count - 1)
         {
+            //Added by KDQ ON 20180803:
+            //Compute sum of every point's parallax in secord and third frame.
+            //Aimed to check second new frame whether or not be remove.
             parallax_sum += compensatedParallax2(it_per_id, frame_count);
             parallax_num++;
         }
@@ -92,6 +100,8 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vec
     {
         ROS_DEBUG("parallax_sum: %lf, parallax_num: %d", parallax_sum, parallax_num);
         ROS_DEBUG("current parallax: %lf", parallax_sum / parallax_num * FOCAL_LENGTH);
+        //Added by KDQ ON 20180803:
+        //Average parallax is smaller than threshold, then marginalize second new frame.
         return parallax_sum / parallax_num >= MIN_PARALLAX;
     }
 }
@@ -357,7 +367,7 @@ void FeatureManager::removeFront(int frame_count)
 double FeatureManager::compensatedParallax2(const FeaturePerId &it_per_id, int frame_count)
 {
     //check the second last frame is keyframe or not
-    //parallax betwwen seconde last frame and third last frame
+    //parallax between seconde last frame and third last frame
     const FeaturePerFrame &frame_i = it_per_id.feature_per_frame[frame_count - 2 - it_per_id.start_frame];
     const FeaturePerFrame &frame_j = it_per_id.feature_per_frame[frame_count - 1 - it_per_id.start_frame];
 

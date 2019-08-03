@@ -11,7 +11,10 @@ InitialEXRotation::InitialEXRotation(){
 bool InitialEXRotation::CalibrationExRotation(vector<pair<Vector3d, Vector3d>> corres, Quaterniond delta_q_imu, Matrix3d &calib_ric_result)
 {
     frame_count++;
+    //Added by KDQ ON 20190803:
+    //Get rotation matrix R between frames with common viewpoints
     Rc.push_back(solveRelativeR(corres));
+    //Push delta_q from imu propogate.
     Rimu.push_back(delta_q_imu.toRotationMatrix());
     Rc_g.push_back(ric.inverse() * delta_q_imu * ric);
 
@@ -68,6 +71,8 @@ bool InitialEXRotation::CalibrationExRotation(vector<pair<Vector3d, Vector3d>> c
 
 Matrix3d InitialEXRotation::solveRelativeR(const vector<pair<Vector3d, Vector3d>> &corres)
 {
+    //Added by KDQ ON 20190803:
+    //Ensure points's number is larger than 9
     if (corres.size() >= 9)
     {
         vector<cv::Point2f> ll, rr;
@@ -76,6 +81,7 @@ Matrix3d InitialEXRotation::solveRelativeR(const vector<pair<Vector3d, Vector3d>
             ll.push_back(cv::Point2f(corres[i].first(0), corres[i].first(1)));
             rr.push_back(cv::Point2f(corres[i].second(0), corres[i].second(1)));
         }
+        //Calculate fundamental matrix[added by KDQ]
         cv::Mat E = cv::findFundamentalMat(ll, rr);
         cv::Mat_<double> R1, R2, t1, t2;
         decomposeE(E, R1, R2, t1, t2);
@@ -85,6 +91,7 @@ Matrix3d InitialEXRotation::solveRelativeR(const vector<pair<Vector3d, Vector3d>
             E = -E;
             decomposeE(E, R1, R2, t1, t2);
         }
+        //test all combinations of R1..t2 and select right R by checking ratio
         double ratio1 = max(testTriangulation(ll, rr, R1, t1), testTriangulation(ll, rr, R1, t2));
         double ratio2 = max(testTriangulation(ll, rr, R2, t1), testTriangulation(ll, rr, R2, t2));
         cv::Mat_<double> ans_R_cv = ratio1 > ratio2 ? R1 : R2;
@@ -98,6 +105,8 @@ Matrix3d InitialEXRotation::solveRelativeR(const vector<pair<Vector3d, Vector3d>
     return Matrix3d::Identity();
 }
 
+//Added by KDQ ON 20190803:
+//Check R|t is right by checking depth in frist frame is positive or not
 double InitialEXRotation::testTriangulation(const vector<cv::Point2f> &l,
                                           const vector<cv::Point2f> &r,
                                           cv::Mat_<double> R, cv::Mat_<double> t)
@@ -109,6 +118,7 @@ double InitialEXRotation::testTriangulation(const vector<cv::Point2f> &l,
     cv::Matx34f P1 = cv::Matx34f(R(0, 0), R(0, 1), R(0, 2), t(0),
                                  R(1, 0), R(1, 1), R(1, 2), t(1),
                                  R(2, 0), R(2, 1), R(2, 2), t(2));
+    //Calculate all points coordinates in frame 1 which is like world frame by triangulate
     cv::triangulatePoints(P, P1, l, r, pointcloud);
     int front_count = 0;
     for (int i = 0; i < pointcloud.cols; i++)
@@ -117,6 +127,7 @@ double InitialEXRotation::testTriangulation(const vector<cv::Point2f> &l,
 
         cv::Mat_<double> p_3d_l = cv::Mat(P) * (pointcloud.col(i) / normal_factor);
         cv::Mat_<double> p_3d_r = cv::Mat(P1) * (pointcloud.col(i) / normal_factor);
+        //test depth is positive or not
         if (p_3d_l(2) > 0 && p_3d_r(2) > 0)
             front_count++;
     }

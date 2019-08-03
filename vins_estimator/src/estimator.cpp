@@ -131,6 +131,8 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
 
     ImageFrame imageframe(image, header.stamp.toSec());
     imageframe.pre_integration = tmp_pre_integration;
+    //Added by KDQ ON 20190803:
+    //all_image_frame is created for initialization.
     all_image_frame.insert(make_pair(header.stamp.toSec(), imageframe));
     tmp_pre_integration = new IntegrationBase{acc_0, gyr_0, Bas[frame_count], Bgs[frame_count]};
 
@@ -218,6 +220,8 @@ bool Estimator::initialStructure()
     TicToc t_sfm;
     //check imu observibility
     {
+      //Added by KDQ ON 20190803:
+      //Calculate variance of accelerate in all image frame,imu excitation should be enough to initialize system.
         map<double, ImageFrame>::iterator frame_it;
         Vector3d sum_g;
         for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++)
@@ -259,6 +263,7 @@ bool Estimator::initialStructure()
         {
             imu_j++;
             Vector3d pts_j = it_per_frame.point;
+            //push common viewpoint's coordinate and frame id which is observed.
             tmp_feature.observation.push_back(make_pair(imu_j, Eigen::Vector2d{pts_j.x(), pts_j.y()}));
         }
         sfm_f.push_back(tmp_feature);
@@ -444,6 +449,8 @@ bool Estimator::relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l)
     {
         vector<pair<Vector3d, Vector3d>> corres;
         corres = f_manager.getCorresponding(i, WINDOW_SIZE);
+        //Added by KDQ ON 20190803:
+        //common viewpoints's number should be more than 20
         if (corres.size() > 20)
         {
             double sum_parallax = 0;
@@ -457,6 +464,7 @@ bool Estimator::relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l)
 
             }
             average_parallax = 1.0 * sum_parallax / int(corres.size());
+            //why *460 > 30?
             if(average_parallax * 460 > 30 && m_estimator.solveRelativeRT(corres, relative_R, relative_T))
             {
                 l = i;

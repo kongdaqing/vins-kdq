@@ -218,6 +218,9 @@ bool MotionEstimator::solveRelativeRT(const vector<pair<Vector3d, Vector3d>> &co
 
         Rotation = R.transpose();
         Translation = -R.transpose() * T;
+        //Added by KDQ ON 20190803:
+        //Inlier number > 12
+
         if(inlier_cnt > 12)
             return true;
         else
