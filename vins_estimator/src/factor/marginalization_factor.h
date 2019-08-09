@@ -45,22 +45,29 @@ struct ThreadsStruct
 
 class MarginalizationInfo
 {
+
   public:
     ~MarginalizationInfo();
     int localSize(int size) const;
     int globalSize(int size) const;
     void addResidualBlockInfo(ResidualBlockInfo *residual_block_info);
+    //Added by KDQ ON 20190809:
+    //calculate jacobian of every residual and update parameter_block_data
     void preMarginalize();
     void marginalize();
     std::vector<double *> getParameterBlocks(std::unordered_map<long, double *> &addr_shift);
 
+    //All measurements
     std::vector<ResidualBlockInfo *> factors;
+    // m - size of parameters which would be marginalized.
+    // n - size of parameters which keep
     int m, n;
+    // Address of all parameters
     std::unordered_map<long, int> parameter_block_size; //global size
     int sum_block_size;
+    // index of address whose parameters would be marginalized in parameter_block_size
     std::unordered_map<long, int> parameter_block_idx; //local size
     std::unordered_map<long, double *> parameter_block_data;
-
     std::vector<int> keep_block_size; //global size
     std::vector<int> keep_block_idx;  //local size
     std::vector<double *> keep_block_data;

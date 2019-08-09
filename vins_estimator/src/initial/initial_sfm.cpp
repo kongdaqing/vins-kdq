@@ -26,6 +26,7 @@ bool GlobalSFM::solveFrameByPnP(Matrix3d &R_initial, Vector3d &P_initial, int i,
 	vector<cv::Point3f> pts_3_vector;
 	for (int j = 0; j < feature_num; j++)
 	{
+    //if feature point has not been triangulated,then skip it.
 		if (sfm_f[j].state != true)
 			continue;
 		Vector2d point2d;
@@ -35,7 +36,9 @@ bool GlobalSFM::solveFrameByPnP(Matrix3d &R_initial, Vector3d &P_initial, int i,
 			{
 				Vector2d img_pts = sfm_f[j].observation[k].second;
 				cv::Point2f pts_2(img_pts(0), img_pts(1));
-				pts_2_vector.push_back(pts_2);
+        pts_2_vector.push_back(pts_2);
+        //Added bY KDQ ON 20190805
+        //points 3d coordinates from function triangulateTwoFrames()?
 				cv::Point3f pts_3(sfm_f[j].position[0], sfm_f[j].position[1], sfm_f[j].position[2]);
 				pts_3_vector.push_back(pts_3);
 				break;
@@ -50,6 +53,8 @@ bool GlobalSFM::solveFrameByPnP(Matrix3d &R_initial, Vector3d &P_initial, int i,
 	}
 	cv::Mat r, rvec, t, D, tmp_r;
 	cv::eigen2cv(R_initial, tmp_r);
+  //Added by KDQ ON 20190805:
+  //convert rotation matrix to rotation vector
 	cv::Rodrigues(tmp_r, rvec);
 	cv::eigen2cv(P_initial, t);
 	cv::Mat K = (cv::Mat_<double>(3, 3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);
@@ -78,11 +83,16 @@ void GlobalSFM::triangulateTwoFrames(int frame0, Eigen::Matrix<double, 3, 4> &Po
 	assert(frame0 != frame1);
 	for (int j = 0; j < feature_num; j++)
 	{
+    //Added by KDQ ON 20190805:
+    //This point would be skip If it has been triangulated,
 		if (sfm_f[j].state == true)
 			continue;
 		bool has_0 = false, has_1 = false;
 		Vector2d point0;
 		Vector2d point1;
+    //Added by KDQ ON 20190805
+    //Match common viewpoint sfm_f[j] in frame0 and frame1.
+    //Note: sfm_f = {frame_id,coordinate}
 		for (int k = 0; k < (int)sfm_f[j].observation.size(); k++)
 		{
 			if (sfm_f[j].observation[k].first == frame0)
@@ -127,6 +137,9 @@ bool GlobalSFM::construct(int frame_num, Quaterniond* q, Vector3d* T, int l,
 	q[l].y() = 0;
 	q[l].z() = 0;
 	T[l].setZero();
+  //Added by KDQ ON 20190805
+  //frame_num - 1 = WINDOW_SIZE -1 = current frame index?
+  //q|T is transform from reference l frame to current frame.
 	q[frame_num - 1] = q[l] * Quaterniond(relative_R);
 	T[frame_num - 1] = relative_T;
 	//cout << "init q_l " << q[l].w() << " " << q[l].vec().transpose() << endl;
@@ -162,6 +175,8 @@ bool GlobalSFM::construct(int frame_num, Quaterniond* q, Vector3d* T, int l,
 		{
 			Matrix3d R_initial = c_Rotation[i - 1];
 			Vector3d P_initial = c_Translation[i - 1];
+      //Added by KDQ ON 20190805:
+      //Solve PnP need 3d points so triangulateTwoFrames is performed earlier.
 			if(!solveFrameByPnP(R_initial, P_initial, i, sfm_f))
 				return false;
 			c_Rotation[i] = R_initial;
@@ -172,6 +187,8 @@ bool GlobalSFM::construct(int frame_num, Quaterniond* q, Vector3d* T, int l,
 		}
 
 		// triangulate point based on the solve pnp result
+    //Added by KDQ ON 20190805:
+    //Note: triangulate points from frame_num-1 to reference frame is performed earlier than solveFrameByPnP(..)
 		triangulateTwoFrames(i, Pose[i], frame_num - 1, Pose[frame_num - 1], sfm_f);
 	}
 	//3: triangulate l-----l+1 l+2 ... frame_num -2
@@ -247,6 +264,8 @@ bool GlobalSFM::construct(int frame_num, Quaterniond* q, Vector3d* T, int l,
 		problem.AddParameterBlock(c_translation[i], 3);
 		if (i == l)
 		{
+      //Added by KDQ ON 20190805:
+      //keep this parameter constant, because it is reference.
 			problem.SetParameterBlockConstant(c_rotation[i]);
 		}
 		if (i == l || i == frame_num - 1)
@@ -261,11 +280,14 @@ bool GlobalSFM::construct(int frame_num, Quaterniond* q, Vector3d* T, int l,
 			continue;
 		for (int j = 0; j < int(sfm_f[i].observation.size()); j++)
 		{
+      //Added by KDQ ON 2090805:
+      //Get frame id in j-th frist term of sfm_f
 			int l = sfm_f[i].observation[j].first;
 			ceres::CostFunction* cost_function = ReprojectionError3D::Create(
 												sfm_f[i].observation[j].second.x(),
 												sfm_f[i].observation[j].second.y());
-
+        //Added by KDQ ON 20190805:
+        //Put transform from l to world and 3D position of points which are observed in frame l
     		problem.AddResidualBlock(cost_function, NULL, c_rotation[l], c_translation[l], 
     								sfm_f[i].position);	 
 		}

@@ -17,6 +17,9 @@ void solveGyroscopeBias(map<double, ImageFrame> &all_image_frame, Vector3d* Bgs)
         VectorXd tmp_b(3);
         tmp_b.setZero();
         Eigen::Quaterniond q_ij(frame_i->second.R.transpose() * frame_j->second.R);
+        //Added by KDQ ON 20190806
+        //0.5*Jac*delta_bg = delta_q.inverse()*q_ij
+        //as below
         tmp_A = frame_j->second.pre_integration->jacobian.template block<3, 3>(O_R, O_BG);
         tmp_b = 2 * (frame_j->second.pre_integration->delta_q.inverse() * q_ij).vec();
         A += tmp_A.transpose() * tmp_A;
@@ -32,6 +35,8 @@ void solveGyroscopeBias(map<double, ImageFrame> &all_image_frame, Vector3d* Bgs)
     for (frame_i = all_image_frame.begin(); next(frame_i) != all_image_frame.end( ); frame_i++)
     {
         frame_j = next(frame_i);
+        //Added by KDQ ON 20190806
+        //pre_integration is recalculated when bias of gyro is update.
         frame_j->second.pre_integration->repropagate(Vector3d::Zero(), Bgs[0]);
     }
 }
@@ -125,6 +130,8 @@ void RefineGravity(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vector
 bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, VectorXd &x)
 {
     int all_frame_count = all_image_frame.size();
+    //Added by KDQ ON 20190805
+    //Initial parameters: vector3d velocity in all frame, vector3d gravity in frame0 and depth scalar
     int n_state = all_frame_count * 3 + 3 + 1;
 
     MatrixXd A{n_state, n_state};
@@ -180,6 +187,8 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
     double s = x(n_state - 1) / 100.0;
     ROS_DEBUG("estimated scale: %f", s);
     g = x.segment<3>(n_state - 4);
+    //Added by KDQ ON 20190806:
+    std::cout << "KDQ: result g-norm: " << g.norm() << " g-vector : " << g.transpose() << std::endl;
     ROS_DEBUG_STREAM(" result g     " << g.norm() << " " << g.transpose());
     if(fabs(g.norm() - G.norm()) > 1.0 || s < 0)
     {
@@ -189,6 +198,8 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
     RefineGravity(all_image_frame, g, x);
     s = (x.tail<1>())(0) / 100.0;
     (x.tail<1>())(0) = s;
+    //Added by KDQ ON 20190806:
+    std::cout << "KDQ: refine g-norm: " << g.norm() << " g-vector : " << g.transpose() << std::endl;
     ROS_DEBUG_STREAM(" refine     " << g.norm() << " " << g.transpose());
     if(s < 0.0 )
         return false;   

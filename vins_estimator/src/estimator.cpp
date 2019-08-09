@@ -277,6 +277,7 @@ bool Estimator::initialStructure()
         return false;
     }
     GlobalSFM sfm;
+
     if(!sfm.construct(frame_count + 1, Q, T, l,
               relative_R, relative_T,
               sfm_f, sfm_tracked_points))
@@ -416,6 +417,8 @@ bool Estimator::visualInitialAlign()
             Vs[kv] = frame_i->second.R * x.segment<3>(kv * 3);
         }
     }
+    //Added by KDQ ON 20190805:
+    //Add depth into feature points
     for (auto &it_per_id : f_manager.feature)
     {
         it_per_id.used_num = it_per_id.feature_per_frame.size();
@@ -430,6 +433,8 @@ bool Estimator::visualInitialAlign()
     g = R0 * g;
     //Matrix3d rot_diff = R0 * Rs[0].transpose();
     Matrix3d rot_diff = R0;
+    //Added by KDQ ON 20190805:
+    //Ps Rs Vs transform from c0 to world?
     for (int i = 0; i <= frame_count; i++)
     {
         Ps[i] = rot_diff * Ps[i];
@@ -532,7 +537,8 @@ void Estimator::vector2double()
     if (ESTIMATE_TD)
         para_Td[0][0] = td;
 }
-
+//Added by KDQ ON 20190809:
+//
 void Estimator::double2vector()
 {
     Vector3d origin_R0 = Utility::R2ypr(Rs[0]);
@@ -609,6 +615,8 @@ void Estimator::double2vector()
         relo_t = rot_diff * Vector3d(relo_Pose[0] - para_Pose[0][0],
                                      relo_Pose[1] - para_Pose[0][1],
                                      relo_Pose[2] - para_Pose[0][2]) + origin_P0;
+        //Added by KDQ ON 20190809:
+        //get T|w1<-w2
         double drift_correct_yaw;
         drift_correct_yaw = Utility::R2ypr(prev_relo_r).x() - Utility::R2ypr(relo_r).x();
         drift_correct_r = Utility::ypr2R(Vector3d(drift_correct_yaw, 0, 0));
@@ -704,12 +712,17 @@ void Estimator::optimization()
     }
 
     TicToc t_whole, t_prepare;
+    //Added by KDQ ON 20190809:
+    //Parameter block derived from state.
     vector2double();
 
     if (last_marginalization_info)
     {
         // construct new marginlization_factor
+        //Added by KDQ ON 20190809:
+        //construnct constriant of state with prior of state
         MarginalizationFactor *marginalization_factor = new MarginalizationFactor(last_marginalization_info);
+        //
         problem.AddResidualBlock(marginalization_factor, NULL,
                                  last_marginalization_parameter_blocks);
     }
@@ -796,8 +809,13 @@ void Estimator::optimization()
                 {
                     retrive_feature_index++;
                 }
+                //Added by KDQ ON 20190809:
+                //match_points.z is match_id that should be index of matched frame in slidewindow.
                 if((int)match_points[retrive_feature_index].z() == it_per_id.feature_id)
                 {
+                    //Added by KDQ ON 20190808:
+                    // 2D points from match keyframe in depository
+                    //this is key info instead of pose info
                     Vector3d pts_j = Vector3d(match_points[retrive_feature_index].x(), match_points[retrive_feature_index].y(), 1.0);
                     Vector3d pts_i = it_per_id.feature_per_frame[0].point;
                     
@@ -832,6 +850,8 @@ void Estimator::optimization()
 
     double2vector();
 
+    //Added by KDQ ON 20190805
+    //Marginalization Process
     TicToc t_whole_marginalization;
     if (marginalization_flag == MARGIN_OLD)
     {
@@ -843,6 +863,8 @@ void Estimator::optimization()
             vector<int> drop_set;
             for (int i = 0; i < static_cast<int>(last_marginalization_parameter_blocks.size()); i++)
             {
+              //Added by KDQ ON 20190809
+              //This is different from optimization above and drop_set is
                 if (last_marginalization_parameter_blocks[i] == para_Pose[0] ||
                     last_marginalization_parameter_blocks[i] == para_SpeedBias[0])
                     drop_set.push_back(i);
@@ -1129,10 +1151,15 @@ void Estimator::slideWindowOld()
 
 void Estimator::setReloFrame(double _frame_stamp, int _frame_index, vector<Vector3d> &_match_points, Vector3d _relo_t, Matrix3d _relo_r)
 {
+    //Added by KDQ ON 20190809:
+    //time stamp of frame in slidewindow which is loop-closure matched with previous frames
+    //points from previous frame
     relo_frame_stamp = _frame_stamp;
     relo_frame_index = _frame_index;
     match_points.clear();
     match_points = _match_points;
+    //Added by KDQ ON 20190809:
+    //PQ of previous frame
     prev_relo_t = _relo_t;
     prev_relo_r = _relo_r;
     for(int i = 0; i < WINDOW_SIZE; i++)
@@ -1142,6 +1169,8 @@ void Estimator::setReloFrame(double _frame_stamp, int _frame_index, vector<Vecto
             relo_frame_local_index = i;
             relocalization_info = 1;
             for (int j = 0; j < SIZE_POSE; j++)
+              //Added by KDQ ON 20190808
+              //Initialize pose of loop-closure-matched frame in repository using its match frame in slidewindow
                 relo_Pose[j] = para_Pose[i][j];
         }
     }

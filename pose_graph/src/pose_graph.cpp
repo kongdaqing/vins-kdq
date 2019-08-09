@@ -66,6 +66,8 @@ void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
     if (flag_detect_loop)
     {
         TicToc tmp_t;
+        //Added by KDQ ON 20190809:
+        //loop closure check by querying DBow of brief
         loop_index = detectLoop(cur_kf, cur_kf->index);
     }
     else
@@ -76,7 +78,8 @@ void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
 	{
         //printf(" %d detect loop with %d \n", cur_kf->index, loop_index);
         KeyFrame* old_kf = getKeyFrame(loop_index);
-
+        //Added by KDQ ON 20190809:
+        //Check matched loop_index frame is right by checking 2D-2D RANSNC and 3D-2D Pnp
         if (cur_kf->findConnection(old_kf))
         {
             if (earliest_loop_index > loop_index || earliest_loop_index == -1)
@@ -123,6 +126,8 @@ void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
                 sequence_loop[cur_kf->sequence] = 1;
             }
             m_optimize_buf.lock();
+            //Added by KDQ ON 20190809:
+            //push index will start to optimize pose
             optimize_buf.push(cur_kf->index);
             m_optimize_buf.unlock();
         }
@@ -316,6 +321,9 @@ int PoseGraph::detectLoop(KeyFrame* keyframe, int frame_index)
     //first query; then add this frame into database!
     QueryResults ret;
     TicToc t_query;
+    //Added by KDQ ON 20190809
+    //DBoW check match frame with current keyframe,
+    //result put in ret and frame index should be earilier 50 than current kf.
     db.query(keyframe->brief_descriptors, ret, 4, frame_index - 50);
     //printf("query time: %f", t_query.toc());
     //cout << "Searching for Image " << frame_index << ". " << ret << endl;
@@ -358,6 +366,8 @@ int PoseGraph::detectLoop(KeyFrame* keyframe, int frame_index)
                     auto it = image_pool.find(tmp_index);
                     cv::Mat tmp_image = (it->second).clone();
                     putText(tmp_image, "loop score:" + to_string(ret[i].Score), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
+                    //Added by KDQ ON 20190809:
+                    //image combination of loop_result and tmp_image
                     cv::hconcat(loop_result, tmp_image, loop_result);
                 }
             }
@@ -370,6 +380,8 @@ int PoseGraph::detectLoop(KeyFrame* keyframe, int frame_index)
         cv::waitKey(20);
     }
 */
+    //Added by KDQ ON 20190809:
+    //match success and get earliest frame
     if (find_loop && frame_index > 50)
     {
         int min_index = -1;
@@ -476,7 +488,7 @@ void PoseGraph::optimize4DoF()
                     problem.SetParameterBlockConstant(t_array[i]);
                 }
 
-                //add edge
+                //add sequence edge
                 for (int j = 1; j < 5; j++)
                 {
                   if (i - j >= 0 && sequence_array[i] == sequence_array[i-j])

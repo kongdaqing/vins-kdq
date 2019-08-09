@@ -295,6 +295,8 @@ void process()
             }
             // set relocalization frame
             sensor_msgs::PointCloudConstPtr relo_msg = NULL;
+            //Added by KDQ 0N 20190808:
+            //close-loop is found and only process last one.
             while (!relo_buf.empty())
             {
                 relo_msg = relo_buf.front();
@@ -317,6 +319,8 @@ void process()
                 Matrix3d relo_r = relo_q.toRotationMatrix();
                 int frame_index;
                 frame_index = relo_msg->channels[0].values[7];
+                //Added by KDQ ON 20190808:
+                //put match frame infos include timestamp/index/feature points?and pose
                 estimator.setReloFrame(frame_stamp, frame_index, match_points, relo_t, relo_r);
             }
 
