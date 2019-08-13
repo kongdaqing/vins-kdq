@@ -170,6 +170,8 @@ struct FourDOFError
 		t_w_ij[2] = tj[2] - ti[2];
 
 		// euler to rotation
+    //Added by KDQ ON 20190812:
+    //keep roll/pitch constant
 		T w_R_i[9];
 		YawPitchRollToRotationMatrix(yaw_i[0], T(pitch_i), T(roll_i), w_R_i);
 		// rotation transpose
@@ -177,6 +179,7 @@ struct FourDOFError
 		RotationMatrixTranspose(w_R_i, i_R_w);
 		// rotation matrix rotate point
 		T t_i_ij[3];
+    //relative pose between frame i and j
 		RotationMatrixRotatePoint(i_R_w, t_w_ij, t_i_ij);
 
 		residuals[0] = (t_i_ij[0] - T(t_x));

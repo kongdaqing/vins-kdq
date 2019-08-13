@@ -55,7 +55,8 @@ void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
         r_drift = Eigen::Matrix3d::Identity();
         m_drift.unlock();
     }
-    
+    //Added by KDQ ON 20190812:
+    //correct pose if loop closure is found?
     cur_kf->getVioPose(vio_P_cur, vio_R_cur);
     vio_P_cur = w_r_vio * vio_P_cur + w_t_vio;
     vio_R_cur = w_r_vio *  vio_R_cur;
@@ -79,7 +80,7 @@ void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
         //printf(" %d detect loop with %d \n", cur_kf->index, loop_index);
         KeyFrame* old_kf = getKeyFrame(loop_index);
         //Added by KDQ ON 20190809:
-        //Check matched loop_index frame is right by checking 2D-2D RANSNC and 3D-2D Pnp
+        //Check matched loop_index frame is right by checking 2D-2D hamming match and 3D-2D PnpRANSNC
         if (cur_kf->findConnection(old_kf))
         {
             if (earliest_loop_index > loop_index || earliest_loop_index == -1)
@@ -92,6 +93,9 @@ void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
 
             Vector3d relative_t;
             Quaterniond relative_q;
+            //Added by KDQ ON 20190812:
+            //relative pose is calculated in findConnection()
+            //Calculate pose of current frame in the world of old frame
             relative_t = cur_kf->getLoopRelativeT();
             relative_q = (cur_kf->getLoopRelativeQ()).toRotationMatrix();
             w_P_cur = w_R_old * relative_t + w_P_old;
@@ -99,10 +103,12 @@ void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
             double shift_yaw;
             Matrix3d shift_r;
             Vector3d shift_t; 
+            //calculate pose of current world to old world by KDQ
             shift_yaw = Utility::R2ypr(w_R_cur).x() - Utility::R2ypr(vio_R_cur).x();
             shift_r = Utility::ypr2R(Vector3d(shift_yaw, 0, 0));
             shift_t = w_P_cur - w_R_cur * vio_R_cur.transpose() * vio_P_cur; 
             // shift vio pose of whole sequence to the world frame
+            // it only happens different sequence but it usually occurs
             if (old_kf->sequence != cur_kf->sequence && sequence_loop[cur_kf->sequence] == 0)
             {  
                 w_r_vio = shift_r;
@@ -136,6 +142,9 @@ void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
     Vector3d P;
     Matrix3d R;
     cur_kf->getVioPose(P, R);
+    //Added by KDQ ON 20190812:
+    //r_drift/t_drift is update by relo_relative_pose_callback and is optimized by optimize4DoF()
+    //r_drift/t_drift is identity matrix or zero matrix if no loop-closure otherwise they are transform matrix from w2 to w1
     P = r_drift * P + t_drift;
     R = r_drift * R;
     cur_kf->updatePose(P, R);
@@ -208,7 +217,7 @@ void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
         }
     }
     //posegraph_visualization->add_pose(P + Vector3d(VISUALIZATION_SHIFT_X, VISUALIZATION_SHIFT_Y, 0), Q);
-
+  //std::cout << "****KDQ**** sequence: " <<cur_kf->sequence << std::endl;
 	keyframelist.push_back(cur_kf);
     publish();
 	m_keyframelist.unlock();
@@ -459,6 +468,8 @@ void PoseGraph::optimize4DoF()
             int i = 0;
             for (it = keyframelist.begin(); it != keyframelist.end(); it++)
             {
+                //Added by KDQ ON 20190812:
+                //Frames before matched frame don't need optimization
                 if ((*it)->index < first_looped_index)
                     continue;
                 (*it)->local_index = i;
@@ -481,7 +492,8 @@ void PoseGraph::optimize4DoF()
 
                 problem.AddParameterBlock(euler_array[i], 1, angle_local_parameterization);
                 problem.AddParameterBlock(t_array[i], 3);
-
+                //Added by KDQ ON 20190812:
+                //if this frame is matched frame,set its pose constant because others are adjusted align with it
                 if ((*it)->index == first_looped_index || (*it)->sequence == 0)
                 {   
                     problem.SetParameterBlockConstant(euler_array[i]);
@@ -489,6 +501,8 @@ void PoseGraph::optimize4DoF()
                 }
 
                 //add sequence edge
+                //Added by KDQ ON 20190812:
+                //Add pose error between it frame and its previous 4 frame
                 for (int j = 1; j < 5; j++)
                 {
                   if (i - j >= 0 && sequence_array[i] == sequence_array[i-j])
@@ -514,6 +528,8 @@ void PoseGraph::optimize4DoF()
                     int connected_index = getKeyFrame((*it)->loop_index)->local_index;
                     Vector3d euler_conncected = Utility::R2ypr(q_array[connected_index].toRotationMatrix());
                     Vector3d relative_t;
+                    //Added by KDQ ON 20190812:
+                    //Get loop_info which is got at frist match.
                     relative_t = (*it)->getLoopRelativeT();
                     double relative_yaw = (*it)->getLoopRelativeYaw();
                     ceres::CostFunction* cost_function = FourDOFWeightError::Create( relative_t.x(), relative_t.y(), relative_t.z(),

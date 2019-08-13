@@ -352,13 +352,13 @@ bool MarginalizationFactor::Evaluate(double const *const *parameters, double *re
         //Added by KDQ ON 20190808
         //this should be parameter : para_SpeedBias[9]
         if (size != 7){
-            std::cout << "*****KDQ***** size !=7 just x-x0! size : " <<size  << std::endl;
+          //  std::cout << "*****KDQ***** size !=7 just x-x0! size : " <<size  << std::endl;
             dx.segment(idx, size) = x - x0;
         }
         else
         {
             //this should be parameter : para_Pose[7]
-            std::cout << "*****KDQ***** size == 7!" << std::endl;
+           // std::cout << "*****KDQ***** size == 7!" << std::endl;
             dx.segment<3>(idx + 0) = x.head<3>() - x0.head<3>();
             dx.segment<3>(idx + 3) = 2.0 * Utility::positify(Eigen::Quaterniond(x0(6), x0(3), x0(4), x0(5)).inverse() * Eigen::Quaterniond(x(6), x(3), x(4), x(5))).vec();
             if (!((Eigen::Quaterniond(x0(6), x0(3), x0(4), x0(5)).inverse() * Eigen::Quaterniond(x(6), x(3), x(4), x(5))).w() >= 0))
@@ -366,7 +366,7 @@ bool MarginalizationFactor::Evaluate(double const *const *parameters, double *re
                 dx.segment<3>(idx + 3) = 2.0 * -Utility::positify(Eigen::Quaterniond(x0(6), x0(3), x0(4), x0(5)).inverse() * Eigen::Quaterniond(x(6), x(3), x(4), x(5))).vec();
             }
         }
-        std::cout << "*****kong***** index : " << i << std::endl;
+       // std::cout << "*****kong***** index : " << i << std::endl;
     }
 
     Eigen::Map<Eigen::VectorXd>(residuals, n) = marginalization_info->linearized_residuals + marginalization_info->linearized_jacobians * dx;

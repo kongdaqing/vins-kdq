@@ -130,7 +130,8 @@ bool KeyFrame::searchInAera(const BRIEF::bitset window_descriptor,
     int bestIndex = -1;
     for(int i = 0; i < (int)descriptors_old.size(); i++)
     {
-
+        //Added by KDQ ON 20190812:
+        //Calculate hamming distance between two frames.
         int dis = HammingDis(window_descriptor, descriptors_old[i]);
         if(dis < bestDist)
         {
@@ -156,6 +157,7 @@ void KeyFrame::searchByBRIEFDes(std::vector<cv::Point2f> &matched_2d_old,
                                 const std::vector<cv::KeyPoint> &keypoints_old,
                                 const std::vector<cv::KeyPoint> &keypoints_old_norm)
 {
+
     for(int i = 0; i < (int)window_brief_descriptors.size(); i++)
     {
         cv::Point2f pt(0.f, 0.f);
@@ -298,6 +300,8 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
 	    }
 	#endif
 	//printf("search by des\n");
+  //Added by KDQ ON 20190812:
+  //calculate hamming distance of brief descriptors between current frame and matched frame,mark matched-well points in status
 	searchByBRIEFDes(matched_2d_old, matched_2d_old_norm, status, old_kf->brief_descriptors, old_kf->keypoints, old_kf->keypoints_norm);
 	reduceVector(matched_2d_cur, status);
 	reduceVector(matched_2d_old, status);
@@ -485,6 +489,8 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
 	    	loop_info << relative_t.x(), relative_t.y(), relative_t.z(),
 	    	             relative_q.w(), relative_q.x(), relative_q.y(), relative_q.z(),
 	    	             relative_yaw;
+        //Added by KDQ ON 20190812:
+        //Publish matched frame pose and points
 	    	if(FAST_RELOCALIZATION)
 	    	{
 			    sensor_msgs::PointCloud msg_match_points;
@@ -570,6 +576,8 @@ double KeyFrame::getLoopRelativeYaw()
 
 void KeyFrame::updateLoop(Eigen::Matrix<double, 8, 1 > &_loop_info)
 {
+  //Added by KDQ ON 20190812:
+  //error of yaw under 30 deg and error of position under 20m?
 	if (abs(_loop_info(7)) < 30.0 && Vector3d(_loop_info(0), _loop_info(1), _loop_info(2)).norm() < 20.0)
 	{
 		//printf("update loop info\n");

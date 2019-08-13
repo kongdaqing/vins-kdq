@@ -46,7 +46,8 @@ void FeatureTracker::setMask()
 
     for (unsigned int i = 0; i < forw_pts.size(); i++)
         cnt_pts_id.push_back(make_pair(track_cnt[i], make_pair(forw_pts[i], ids[i])));
-
+    //Added by KDQ ON 20190810:
+    //sort from larget to small of tracking number
     sort(cnt_pts_id.begin(), cnt_pts_id.end(), [](const pair<int, pair<cv::Point2f, int>> &a, const pair<int, pair<cv::Point2f, int>> &b)
          {
             return a.first > b.first;
@@ -58,6 +59,8 @@ void FeatureTracker::setMask()
 
     for (auto &it : cnt_pts_id)
     {
+        //Added by KDQ ON 20190810:
+        //If this aera is not changed,the aera will be circle at feature points position
         if (mask.at<uchar>(it.second.first) == 255)
         {
             forw_pts.push_back(it.second.first);
@@ -84,6 +87,8 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
     TicToc t_r;
     cur_time = _cur_time;
 
+    //Added by KDQ ON 20190810:
+    //EQUALIZE is usually turn on when image is too dark or light.
     if (EQUALIZE)
     {
         cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
@@ -115,6 +120,8 @@ void FeatureTracker::readImage(const cv::Mat &_img, double _cur_time)
         for (int i = 0; i < int(forw_pts.size()); i++)
             if (status[i] && !inBorder(forw_pts[i]))
                 status[i] = 0;
+        //Added by KDQ ON 20190810:
+        //resize vector using only tracked feature points
         reduceVector(prev_pts, status);
         reduceVector(cur_pts, status);
         reduceVector(forw_pts, status);
@@ -176,6 +183,8 @@ void FeatureTracker::rejectWithF()
         for (unsigned int i = 0; i < cur_pts.size(); i++)
         {
             Eigen::Vector3d tmp_p;
+            //Added by KDQ ON 20190810:
+            // Distortion correction using camera internel parameters
             m_camera->liftProjective(Eigen::Vector2d(cur_pts[i].x, cur_pts[i].y), tmp_p);
             tmp_p.x() = FOCAL_LENGTH * tmp_p.x() / tmp_p.z() + COL / 2.0;
             tmp_p.y() = FOCAL_LENGTH * tmp_p.y() / tmp_p.z() + ROW / 2.0;

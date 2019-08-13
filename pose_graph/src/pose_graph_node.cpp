@@ -188,6 +188,8 @@ void relo_relative_pose_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
     relative_q.y() = pose_msg->pose.pose.orientation.y;
     relative_q.z() = pose_msg->pose.pose.orientation.z;
     double relative_yaw = pose_msg->twist.twist.linear.x;
+    //Added by KDQ ON 20190812:
+    //Frame index
     int index = pose_msg->twist.twist.linear.y;
     //printf("receive index %d \n", index );
     Eigen::Matrix<double, 8, 1 > loop_info;
