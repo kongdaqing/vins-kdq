@@ -453,6 +453,7 @@ bool Estimator::relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l)
     for (int i = 0; i < WINDOW_SIZE; i++)
     {
         vector<pair<Vector3d, Vector3d>> corres;
+        //KDQ:注意这里取的是归一化平面坐标点
         corres = f_manager.getCorresponding(i, WINDOW_SIZE);
         //Added by KDQ ON 20190803:
         //common viewpoints's number should be more than 20
@@ -469,7 +470,7 @@ bool Estimator::relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l)
 
             }
             average_parallax = 1.0 * sum_parallax / int(corres.size());
-            //why *460 > 30?
+            //KDQ:*460 = 像素坐标，要求平均像素级的视差要大于30
             if(average_parallax * 460 > 30 && m_estimator.solveRelativeRT(corres, relative_R, relative_T))
             {
                 l = i;
