@@ -21,6 +21,7 @@ void Estimator::setParameter()
 
 void Estimator::clearState()
 {
+    initialSuccess_count = 0;
     for (int i = 0; i < WINDOW_SIZE + 1; i++)
     {
         Rs[i].setIdentity();
@@ -156,6 +157,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
 
     if (solver_flag == INITIAL)
     {
+        
         if (frame_count == WINDOW_SIZE)
         {
             bool result = false;
@@ -164,8 +166,14 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
               //Go into intialization
                result = initialStructure();
                initial_timestamp = header.stamp.toSec();
+               if(result)
+                   initialSuccess_count++;
+               else
+                   initialSuccess_count = 0;
+                
+                
             }
-            if(result)
+            if(initialSuccess_count >= 2)
             {
                 solver_flag = NON_LINEAR;
                 solveOdometry();

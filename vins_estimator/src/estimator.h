@@ -61,7 +61,8 @@ class Estimator
         MARGIN_OLD = 0,
         MARGIN_SECOND_NEW = 1
     };
-
+  
+    int initialSuccess_count;
     SolverFlag solver_flag;
     MarginalizationFlag  marginalization_flag;
     Vector3d g;
