@@ -4,7 +4,7 @@
 imu_topic: "/imu0"
 image_topic: "/cam0/image_raw"
 replay_folder: "/home/kdq/Workspace/Falcon_ENV/Log/rovio_tst/27_high_test"
-output_path: "/home/kdq/Workspace/Falcon_ENV/Log/rovio_tst/27_high_test/vins"
+output_path: "/home/kdq/Workspace/Falcon_ENV/Log/test/20201025/loop_run/"
 
 #camera calibration 
 model_type: KANNALA_BRANDT
@@ -12,14 +12,14 @@ camera_name: camera
 image_width: 320
 image_height: 240
 projection_parameters:
-   k2: 0.2760428
-   k3: -0.3664766
-   k4: 0.1191996
+   k2: 0.2716757
+   k3: -0.3541268
+   k4: 0.1135237
    k5: 0.0
-   mu: 171.8318535
-   mv: 171.37055165
-   u0: 154.09908865
-   v0: 113.7788697
+   mu: 171.9050911
+   mv: 173.3297331
+   u0: 160.4462834
+   v0: 127.4526683
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
