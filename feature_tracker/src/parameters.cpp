@@ -60,7 +60,7 @@ void readParameters(ros::NodeHandle &n)
         FISHEYE_MASK = VINS_FOLDER_PATH + "config/fisheye_mask.jpg";
     CAM_NAMES.push_back(config_file);
 
-    WINDOW_SIZE = 20;
+    WINDOW_SIZE = 10;
     STEREO_TRACK = false;
     FOCAL_LENGTH = 460;
     PUB_THIS_FRAME = false;
